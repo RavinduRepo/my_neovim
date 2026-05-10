@@ -268,3 +268,11 @@ vim.api.nvim_create_autocmd("FileType", {
     end, vim.tbl_extend("force", opts, { desc = "ASM: Configure Flags" }))
   end,
 })
+
+-- Toggle Neovim 0.12 Native Undo Tree
+vim.keymap.set("n", "<leader>uu", function()
+  -- Load the built-in plugin (running packadd multiple times is perfectly safe/fast)
+  vim.cmd("packadd nvim.undotree")
+  -- The open() function automatically acts as a toggle!
+  require("undotree").open()
+end, { desc = "Toggle Undo Tree" })
