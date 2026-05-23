@@ -276,3 +276,5 @@ vim.keymap.set("n", "<leader>uu", function()
   -- The open() function automatically acts as a toggle!
   require("undotree").open()
 end, { desc = "Toggle Undo Tree" })
+
+vim.keymap.set("i", "jj", "<Esc>", { desc = "Exit insert mode" })
