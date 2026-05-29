@@ -278,3 +278,8 @@ vim.keymap.set("n", "<leader>uu", function()
 end, { desc = "Toggle Undo Tree" })
 
 vim.keymap.set("i", "jj", "<Esc>", { desc = "Exit insert mode" })
+
+-- Find files including gitignored and hidden files using direct Snacks API
+vim.keymap.set("n", "<leader>fi", function()
+  require("snacks").picker.files({ hidden = true, ignored = true })
+end, { desc = "Find Files (Include Ignored & Hidden)" })

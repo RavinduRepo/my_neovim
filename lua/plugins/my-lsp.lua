@@ -18,6 +18,24 @@ return {
             "--query-driver=C:/**/gcc.exe,C:/**/g++.exe",
           },
         },
+        intelephense = {
+          settings = {
+            intelephense = {
+              files = {
+                exclude = {
+                  "**/.git/**",
+                  "**/vendor/**",
+                  "**/node_modules/**",
+                  "**/storage/**",
+                  "**/cache/**",
+                },
+              },
+              memory = {
+                limit = 4096,
+              },
+            },
+          },
+        },
       },
     },
   },
