@@ -14,7 +14,8 @@
     "lazyvim.plugins.extras.lang.php",
     "lazyvim.plugins.extras.lang.python",
     "lazyvim.plugins.extras.lang.typescript",
-    "lazyvim.plugins.extras.lang.typescript.vtsls"
+    "lazyvim.plugins.extras.lang.typescript.vtsls",
+    "lazyvim.plugins.extras.ui.treesitter-context"
   ],
   "install_version": 8,
   "news": {
