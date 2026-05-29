@@ -8,19 +8,44 @@ return {
         auto_enable = false, -- Keeps the minimap off by default
 
         -- SCALE COMPRESSION:
-        -- How many rows of actual code a single minimap dot should span.
-        -- Default is 1. Increase this to "shrink" the text vertically
-        -- and see more of your file in the mini view.
         y_multiplier = 4,
-
-        -- How many columns of code a dot should span.
-        -- Default is 4. Tweak this to adjust horizontal compression.
         x_multiplier = 4,
+
+        -- DIAGNOSTICS:
+        -- Set to false to hide error/warning colors on the minimap by default.
+        diagnostic = {
+          enabled = false,
+        },
       }
     end,
     keys = {
       -- Mapped to capital M and registers in the LazyVim UI menu
       { "<leader>uM", "<cmd>Neominimap toggle<cr>", desc = "Toggle Minimap" },
+
+      -- Toggles diagnostic colors on the minimap dynamically
+      {
+        "<leader>uD",
+        function()
+          -- Fetch current config or initialize
+          local config = vim.g.neominimap or {}
+          config.diagnostic = config.diagnostic or {}
+
+          -- Toggle the boolean (plugin defaults to true if nil)
+          local is_enabled = config.diagnostic.enabled
+          if is_enabled == nil then
+            is_enabled = true
+          end
+          config.diagnostic.enabled = not is_enabled
+
+          -- Reassign and refresh the minimap API to apply changes instantly
+          vim.g.neominimap = config
+          require("neominimap.api").refresh()
+
+          -- Optional: subtle notification
+          vim.notify("Minimap Diagnostics: " .. (config.diagnostic.enabled and "ON" or "OFF"))
+        end,
+        desc = "Toggle Minimap Diagnostics",
+      },
     },
   },
 }
