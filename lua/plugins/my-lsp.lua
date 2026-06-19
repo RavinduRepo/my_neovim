@@ -36,6 +36,15 @@ return {
             },
           },
         },
+        -- Verilog / SystemVerilog LSP Configuration
+        verible = {
+          filetypes = { "verilog", "systemverilog" },
+          root_dir = function(fname)
+            local util = require("lspconfig.util")
+            -- Updated to use native vim.fs.dirname to fix deprecation warning
+            return util.root_pattern(".git")(fname) or vim.fs.dirname(fname)
+          end,
+        },
       },
     },
   },
