@@ -302,7 +302,7 @@ return {
           local lines = {
             " 📁 " .. current_view_dir:gsub(vim.fn.expand("~"), "~"),
             " ────────────────────────────────────────────────",
-            " [Space] Active | [Enter] Enter | [o] Sys Open    ",
+            " [Space] Active | [Enter] Edit | [o] Sys Open    ",
             " [a] Add | [d] Del | [r] Rename | [e] Exp | [q] Quit ",
             " ────────────────────────────────────────────────",
             "  ../",
@@ -427,7 +427,7 @@ return {
           end
         end)
 
-        -- New: OS File/Dir Opener
+        -- OS File/Dir Opener
         map("o", function()
           local line = vim.api.nvim_get_current_line()
           local target
@@ -485,7 +485,7 @@ return {
           end)
         end)
 
-        -- New: Rename File/Folder
+        -- Rename File/Folder
         map("r", function()
           local line = vim.api.nvim_get_current_line()
           local target = line:match("%s*(.-)/?$") or line:match("%s*(.-)$")
@@ -538,6 +538,12 @@ return {
       -- Seamless Snippet Capture (with Topic List)
       local function capture_snippet()
         local ft = vim.bo.filetype
+        -- Grab the current file path and replace the home directory with ~ for a cleaner look
+        local source_file = vim.fn.expand("%:p:~")
+        if source_file == "" then
+          source_file = "Unnamed Buffer"
+        end
+
         local _, csrow, _, _ = unpack(vim.fn.getpos("'<"))
         local _, cerow, _, _ = unpack(vim.fn.getpos("'>"))
         local lines = vim.api.nvim_buf_get_lines(0, csrow - 1, cerow, false)
@@ -580,13 +586,19 @@ return {
               end
               local filepath = current_project_path .. "/" .. topic
               local file = io.open(filepath, "a")
+
+              -- Write the timestamp, explanation, and nicely formatted source path
               file:write("\n### " .. os.date("%Y-%m-%d %H:%M") .. "\n")
-              file:write(comment .. "\n\n```" .. ft .. "\n")
+              file:write(comment .. "\n\n")
+              file:write("> *Source:* `[" .. source_file .. "]`\n\n")
+
+              file:write("```" .. ft .. "\n")
               for _, line in ipairs(lines) do
                 file:write(line .. "\n")
               end
               file:write("```\n\n---\n")
               file:close()
+
               vim.notify("Saved to " .. topic, vim.log.levels.INFO, { title = "Notes System" })
             end
 
@@ -615,7 +627,7 @@ return {
         require("telescope.builtin").live_grep({ cwd = notes_dir })
       end, { desc = "Grep Notes" })
 
-      -- New: Notes Lazygit
+      -- Notes Lazygit
       vim.keymap.set("n", "<leader>mG", function()
         local ok, snacks = pcall(require, "snacks")
         if ok and snacks.lazygit then
