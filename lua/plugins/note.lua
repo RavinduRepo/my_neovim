@@ -301,10 +301,10 @@ return {
           vim.bo[buf].modifiable = true
           local lines = {
             " 📁 " .. current_view_dir:gsub(vim.fn.expand("~"), "~"),
-            " ──────────────────────────────────────────────",
-            " [Space] Active | [<CR>] Edit | [o] Sys Open   ",
-            " [a] Add | [d] Delete | [e] Export | [q] Close ",
-            " ──────────────────────────────────────────────",
+            " ────────────────────────────────────────────────",
+            " [Space] Active | [Enter] Enter | [o] Sys Open    ",
+            " [a] Add | [d] Del | [r] Rename | [e] Exp | [q] Quit ",
+            " ────────────────────────────────────────────────",
             "  ../",
           }
 
@@ -481,6 +481,40 @@ return {
             if input == "y" then
               vim.fn.delete(current_view_dir .. "/" .. target, "rf")
               draw_ui()
+            end
+          end)
+        end)
+
+        -- New: Rename File/Folder
+        map("r", function()
+          local line = vim.api.nvim_get_current_line()
+          local target = line:match("%s*(.-)/?$") or line:match("%s*(.-)$")
+          if not target then
+            return
+          end
+
+          vim.ui.input({ prompt = "Rename to: ", default = target }, function(new_name)
+            if not new_name or new_name == "" or new_name == target then
+              return
+            end
+
+            local old_path = current_view_dir .. "/" .. target
+            local new_path = current_view_dir .. "/" .. new_name
+
+            if vim.fn.filereadable(new_path) == 1 or vim.fn.isdirectory(new_path) == 1 then
+              vim.notify(
+                "A file or folder with that name already exists!",
+                vim.log.levels.ERROR,
+                { title = "Notes System" }
+              )
+              return
+            end
+
+            if vim.fn.rename(old_path, new_path) == 0 then
+              draw_ui()
+              vim.notify("Renamed to " .. new_name, vim.log.levels.INFO, { title = "Notes System" })
+            else
+              vim.notify("Failed to rename " .. target, vim.log.levels.ERROR, { title = "Notes System" })
             end
           end)
         end)
