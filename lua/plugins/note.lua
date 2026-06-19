@@ -15,33 +15,104 @@ return {
       end
       ensure_dir(notes_dir)
 
+      -- Enumerate .md files in a directory (Lua-side, avoids shell glob failures)
+      local function get_md_files(dir)
+        local files = {}
+        local handle = vim.loop.fs_scandir(dir)
+        if handle then
+          while true do
+            local name, typ = vim.loop.fs_scandir_next(handle)
+            if not name then
+              break
+            end
+            if (typ == "file" or typ == "link") and name:match("%.md$") then
+              table.insert(files, name)
+            end
+          end
+        end
+        table.sort(files)
+        return files
+      end
+
+      -- Detect best available PDF engine in priority order.
+      -- weasyprint and wkhtmltopdf need no LaTeX installation.
+      -- Install on Arch:    sudo pacman -S python-weasyprint
+      -- Install on Mac:     brew install weasyprint
+      -- Install on Windows: pip install weasyprint
+      local function detect_pdf_engine()
+        for _, e in ipairs({ "weasyprint", "wkhtmltopdf", "lualatex", "xelatex", "pdflatex" }) do
+          if vim.fn.executable(e) == 1 then
+            return e
+          end
+        end
+        return nil
+      end
+
       -- Export Logic
       local function do_export(target_dir, target_file)
-        local cmd
-        if target_file then
-          local pdf_name = target_file:gsub("%.md$", ".pdf")
-          cmd = string.format("cd %q && pandoc %q -o %q", target_dir, target_file, pdf_name)
-          vim.notify("Exporting " .. target_file .. "...", vim.log.levels.INFO, { title = "Notes System" })
-        else
-          cmd = string.format("cd %q && pandoc *.md -o _Notebook_Export.pdf", target_dir)
-          vim.notify("Exporting all notes in directory...", vim.log.levels.INFO, { title = "Notes System" })
+        if vim.fn.executable("pandoc") == 0 then
+          vim.notify("pandoc not found. Install it first.", vim.log.levels.ERROR, { title = "Notes System" })
+          return
         end
 
-        local stderr_chunks = {}
-        vim.fn.jobstart({ "sh", "-c", cmd }, {
+        local engine = detect_pdf_engine()
+        if not engine then
+          vim.notify(
+            "No PDF engine found.\nInstall one of: python-weasyprint, wkhtmltopdf, or texlive",
+            vim.log.levels.ERROR,
+            { title = "Notes System" }
+          )
+          return
+        end
+
+        local engine_flag = "--pdf-engine=" .. engine
+        -- LaTeX engines need explicit margins or text can overflow the page
+        local extra = (engine:match("latex") or engine:match("tex")) and "-V geometry:margin=1in" or ""
+
+        local cmd
+        if target_file and target_file ~= "" and target_file:match("%.md$") then
+          local pdf = target_file:gsub("%.md$", ".pdf")
+          cmd = string.format("cd %q && pandoc %s %s %q -o %q", target_dir, engine_flag, extra, target_file, pdf)
+          vim.notify("Exporting " .. target_file .. " ...", vim.log.levels.INFO, { title = "Notes System" })
+        else
+          -- Enumerate files in Lua so we never pass a bare *.md glob to the shell.
+          -- (When no files match, shells pass the literal "*.md" to pandoc → crash.)
+          local files = get_md_files(target_dir)
+          if #files == 0 then
+            vim.notify("No .md files in this directory.", vim.log.levels.WARN, { title = "Notes System" })
+            return
+          end
+          local file_args = table.concat(
+            vim.tbl_map(function(f)
+              return string.format("%q", f)
+            end, files),
+            " "
+          )
+          cmd =
+            string.format("cd %q && pandoc %s %s %s -o _Notebook_Export.pdf", target_dir, engine_flag, extra, file_args)
+          vim.notify("Exporting " .. #files .. " notes ...", vim.log.levels.INFO, { title = "Notes System" })
+        end
+
+        local stderr_out = {}
+        -- Windows uses cmd /c; Linux and Mac use sh -c
+        local shell = vim.fn.has("win32") == 1 and { "cmd", "/c", cmd } or { "sh", "-c", cmd }
+        vim.fn.jobstart(shell, {
           on_stderr = function(_, data)
-            for _, line in ipairs(data) do
-              if line ~= "" then
-                table.insert(stderr_chunks, line)
+            for _, l in ipairs(data) do
+              if l ~= "" then
+                table.insert(stderr_out, l)
               end
             end
           end,
           on_exit = function(_, code)
             if code == 0 then
-              vim.notify("PDF Export successful!", vim.log.levels.INFO, { title = "Notes System" })
+              vim.notify("Export successful!", vim.log.levels.INFO, { title = "Notes System" })
             else
-              local err_msg = table.concat(stderr_chunks, "\n")
-              vim.notify("Pandoc failed:\n" .. err_msg, vim.log.levels.ERROR, { title = "Notes System" })
+              vim.notify(
+                "Export failed:\n" .. table.concat(stderr_out, "\n"),
+                vim.log.levels.ERROR,
+                { title = "Notes System" }
+              )
             end
           end,
         })
@@ -97,7 +168,7 @@ return {
           end)
 
           for _, entry in ipairs(entries) do
-            local prefix = entry.type == "directory" and "    " or "    "
+            local prefix = entry.type == "directory" and "    " or "    "
             local suffix = entry.type == "directory" and "/" or ""
             table.insert(lines, prefix .. entry.name .. suffix)
           end
@@ -141,12 +212,12 @@ return {
           if line:match("%.%./") then
             current_view_dir = vim.fn.fnamemodify(current_view_dir, ":h")
             draw_ui()
-          elseif line:match("") then
-            local dir = line:match("%s*(.-)/?$")
+          elseif line:match("") then
+            local dir = line:match("%s*(.-)/?$")
             current_view_dir = current_view_dir .. "/" .. dir
             draw_ui()
-          elseif line:match("") then
-            local file = line:match("%s*(.-)$")
+          elseif line:match("") then
+            local file = line:match("%s*(.-)$")
             vim.api.nvim_win_close(win, true)
             vim.cmd("e " .. vim.fn.fnameescape(current_view_dir .. "/" .. file))
           end
@@ -179,7 +250,7 @@ return {
 
         map("d", function()
           local line = vim.api.nvim_get_current_line()
-          local target = line:match("%s*(.-)/?$") or line:match("%s*(.-)$")
+          local target = line:match("%s*(.-)/?$") or line:match("%s*(.-)$")
           if not target then
             return
           end
@@ -192,9 +263,14 @@ return {
         end)
 
         map("e", function()
-          local line = vim.api.nvim_get_current_line()
-          local target_file = line:match("%s*(.-)$")
-          do_export(current_view_dir, target_file)
+          local raw = vim.api.nvim_get_current_line()
+          -- Strip leading/trailing whitespace and trailing slash (dirs end with /)
+          local name = raw:gsub("^%s+", ""):gsub("%s+$", ""):gsub("/$", "")
+          if name:match("%.md$") then
+            do_export(current_view_dir, name) -- export this single file
+          else
+            do_export(current_view_dir, nil) -- export all .md in current dir
+          end
         end)
 
         draw_ui()
