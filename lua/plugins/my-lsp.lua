@@ -54,7 +54,9 @@ return {
         filetypes = { "verilog", "systemverilog" },
         root_dir = function(fname)
           local util = require("lspconfig.util")
-          return util.root_pattern(".git")(fname) or vim.fs.dirname(fname)
+          -- Ensure fname is a string path; fallback to current buffer path if needed
+          local path = type(fname) == "string" and fname or vim.api.nvim_buf_get_name(0)
+          return util.root_pattern(".git")(path) or vim.fs.dirname(path) or vim.uv.cwd()
         end,
       }
     end,
