@@ -81,6 +81,9 @@ With Neovim open in `~/Documents/My_Projects/dap-sandbox/cpp`:
 cd ~/.config/nvim/claude-dap-bridge && node smoke-test.mjs
 ```
 
+`php-test.mjs` and `react-test.mjs` do the same for the other two sandboxes;
+the React one needs `npm run dev` running in `dap-sandbox/react` first.
+
 Sets a breakpoint, launches the C++ sandbox, evaluates locals, steps, moves the
 cursor, and terminates.
 
@@ -100,3 +103,6 @@ cursor, and terminates.
   not the bridge. Use `dap_control` `step_over` or set a breakpoint in the caller.
 - **React stops in bundled code** — source maps are off; `vite` dev has them by
   default, production builds need `build.sourcemap = true`.
+- **React never launches a browser** — vscode-js-debug looks for Google Chrome
+  by name. On a machine with only Chromium or Brave, set `runtimeExecutable` to
+  its absolute path (the sandbox config detects this).
