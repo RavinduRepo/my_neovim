@@ -1,0 +1,12 @@
+{
+  "name": "claude-dap-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server exposing a running nvim-dap session to Claude Code",
+  "bin": { "claude-dap-bridge": "./index.js" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "neovim": "^5.3.0"
+  }
+}
